@@ -1,64 +1,6 @@
 import urllib.parse, typing, requests
-
-
-class OverloadList(list):
-    """A list subclass.
-
-    """
-
-
-class MultiDict(dict):
-    def __init__(self, *args, **kwargs) -> None:
-        """Similar to a dictionary, multiple keys default to nested dictionaries.
-
-        Essentially:
-        ```
-        # this:
-        v = {}
-        v["a"] = {}
-        v["a"]["b"] = {}
-        v["a"]["b"]["c"] = "d"
-        print(v)
-        >>> {'a': {'b': 'c'}}
-
-        # turns into this:
-        v = MultiDict()
-        v["a", "b", "c"] = "d"
-        print(v)
-        >>> {'a': {'b': {'c': 'd'}}}
-        ```
-        
-        """
-        super().__init__(*args, **kwargs)
-    
-
-    def __setitem__(self, __k, __v, *, _pass = None) -> None:
-        if _pass is None:
-            _pass = self
-        if type(__k) == tuple and len(__k) > 1:
-            if __k[0] not in _pass:
-                _pass[__k[0]] = {}
-            return self.__setitem__(__k[1:], __v, _pass = _pass[__k[0]])
-        if type(__k) == tuple:
-            [__k] = __k
-        return dict.__setitem__(_pass, __k, __v)
-
-
-class OverloadDict(dict):
-    """Similar to a dictionary, but turns multiple occurances of a key into a list of
-    values intead of overwriting.
-
-    """
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-    
-
-    def __setitem__(self, __k: str, __v: str) -> None:
-        if __k in self and isinstance(self[__k], OverloadList):
-            return self[__k].append(__v)
-        if __k in self:
-            return super().__setitem__(__k, OverloadList([self[__k], __v]))
-        return super().__setitem__(__k, __v)
+from .MultiDict import MultiDict
+from .OverloadDict import OverloadDict
 
 
 def _format_protocol(protocol: str, separator: str) -> str:
@@ -87,13 +29,11 @@ def _format_parameters(no_value_indicator: typing.Any, parameters: OverloadDict,
     if not parameters:
         return ""
     formatted_query_parameters = []
-    for k, v in parameters.items():
-        if v == no_value_indicator:
-            continue
-        if isinstance(v, OverloadList):
-            formatted_query_parameters.extend([_format_param(k, v_, equator) for v_ in v])
-            continue
-        formatted_query_parameters.append(_format_param(k, v, equator))
+    for k, v_list in parameters.items():
+        for v in v_list:
+            if v == no_value_indicator:
+                continue
+            formatted_query_parameters.append(_format_param(k, v, equator))
     return f"{separator}{joiner.join(formatted_query_parameters)}" if formatted_query_parameters else ""
 
 
@@ -159,34 +99,34 @@ class PreparedFetch:
 
         Arguments
         ---------
-        no_value_indicator : any, default=...
+        no_value_indicator : any, optional, default=...
             Any value in `parameters` or `request_kwargs` that equal this value will be
             ignored when constructing (and later executing) the request.
-        protocol : str, default="https"
-        protocol_separator : str, default="://"
+        protocol : str, defaultoptional, ="https"
+        protocol_separator : str, optional, default="://"
             Separates the protocol and subdomain.
-        domain_separator : str, default="."
+        domain_separator : str, optional, default="."
             Separates the subdomain, domain, and top level domain.
-        subdomain : str, default="www"
-        domain : str, default=None
-        top_level_domain : str, default="com"
-        port_separator : str, default=":"
+        subdomain : str, defaultoptional, ="www"
+        domain : str, optional, default=None
+        top_level_domain : str, defaultoptional, ="com"
+        port_separator : str, optional, default=":"
             Separates the full domain and the port.
-        port : int or str, default=None
-        path_separator : str, default="/"
+        port : int or str, optional, default=None
+        path_separator : str, optional, default="/"
             Separates the path entries.
-        paths : list of str, default=...,
+        paths : list of str, optional, default=...
             The list (in order) of paths to be joined with `path_separator`.
-        query_string_separator : str, default="?"
+        query_string_separator : str, optional, default="?"
             Separates the end of the domain / path / port and the query string.
-        query_string_joiner : str, default="&"
+        query_string_joiner : str, optional, default="&"
             Separates multiple query key-value pairs.
-        query_string_equator : str, default="="
+        query_string_equator : str, optional, default="="
             Separates query string keys and values.
-        fragment_separator : str, default="#"
+        fragment_separator : str, optional, default="#"
             Separates the end of the domain / path / port / query string and the
             fragment.
-        fragment : str, default=None
+        fragment : str, optional, default=None
     
         Attributes
         ----------
@@ -207,6 +147,9 @@ class PreparedFetch:
             print(request_kwargs)
             >>> {'headers': {'cookie' : '...'}}
             ```
+        url : str
+            If set, a URL will not be constructed and will instead simply default to
+            this value.
         
         """
         self.no_value_indicator     = no_value_indicator
@@ -227,13 +170,16 @@ class PreparedFetch:
         self.fragment_separator     = fragment_separator 
         self.fragment               = fragment
         self.request_kwargs         = MultiDict()
+        self.url                    = None
     
 
     @property
-    def url(self) -> str:
+    def _url(self) -> str:
         """Formats the given URL information into a URL.
         
         """
+        if self.url:
+            return self.url
         protocol         = _format_protocol(self.protocol, self.protocol_separator)
         subdomain        = _format_subdomain(self.subdomain, self.domain_separator)
         top_level_domain = _format_top_level_domain(self.top_level_domain, self.domain_separator)
@@ -253,12 +199,12 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`. The same applies for the
         `method` key.
 
         """
-        return _make_request(self.no_value_indicator, method, self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, method, self._url, self.request_kwargs, kwargs)
 
 
     async def async_request(self, method: str, **kwargs) -> requests.Response:
@@ -270,12 +216,12 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`. The same applies for the
         `method` key.
 
         """
-        return _make_request(self.no_value_indicator, method, self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, method, self._url, self.request_kwargs, kwargs)
 
 
     def get(self, **kwargs) -> requests.Response:
@@ -287,11 +233,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "GET", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "GET", self._url, self.request_kwargs, kwargs)
 
 
     async def async_get(self, **kwargs) -> requests.Response:
@@ -303,11 +249,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "GET", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "GET", self._url, self.request_kwargs, kwargs)
 
 
     def options(self, **kwargs) -> requests.Response:
@@ -319,11 +265,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "OPTIONS", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "OPTIONS", self._url, self.request_kwargs, kwargs)
 
 
     async def async_options(self, **kwargs) -> requests.Response:
@@ -335,11 +281,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "OPTIONS", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "OPTIONS", self._url, self.request_kwargs, kwargs)
 
 
     def head(self, **kwargs) -> requests.Response:
@@ -351,11 +297,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "HEAD", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "HEAD", self._url, self.request_kwargs, kwargs)
 
 
     async def async_head(self, **kwargs) -> requests.Response:
@@ -367,11 +313,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "HEAD", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "HEAD", self._url, self.request_kwargs, kwargs)
 
 
     def post(self, **kwargs) -> requests.Response:
@@ -383,11 +329,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "POST", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "POST", self._url, self.request_kwargs, kwargs)
 
 
     async def async_post(self, **kwargs) -> requests.Response:
@@ -399,11 +345,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "POST", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "POST", self._url, self.request_kwargs, kwargs)
 
 
     def put(self, **kwargs) -> requests.Response:
@@ -415,11 +361,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "PUT", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "PUT", self._url, self.request_kwargs, kwargs)
 
 
     async def async_put(self, **kwargs) -> requests.Response:
@@ -431,11 +377,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "PUT", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "PUT", self._url, self.request_kwargs, kwargs)
 
 
     def patch(self, **kwargs) -> requests.Response:
@@ -447,11 +393,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "PATCH", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "PATCH", self._url, self.request_kwargs, kwargs)
 
 
     async def async_patch(self, **kwargs) -> requests.Response:
@@ -463,11 +409,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "PATCH", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "PATCH", self._url, self.request_kwargs, kwargs)
 
 
     def delete(self, **kwargs) -> requests.Response:
@@ -479,11 +425,11 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "DELETE", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "DELETE", self._url, self.request_kwargs, kwargs)
 
 
     async def async_delete(self, **kwargs) -> requests.Response:
@@ -495,8 +441,8 @@ class PreparedFetch:
         -----
         Any key in `PreparedFetch.request_kwargs` that is present in `kwargs` will be
         overridden by the corresponding value in `kwargs`. Similarly, if the `url` key
-        is used in `kwargs`, the constructed url (`PreparedFetch.url`) will be
+        is used in `kwargs`, the constructed url (`PreparedFetch._url`) will be
         overridden by the corresponding value in `kwargs`.
 
         """
-        return _make_request(self.no_value_indicator, "DELETE", self.url, self.request_kwargs, kwargs)
+        return _make_request(self.no_value_indicator, "DELETE", self._url, self.request_kwargs, kwargs)

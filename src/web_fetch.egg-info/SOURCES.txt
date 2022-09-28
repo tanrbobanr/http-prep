@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+src/web_fetch.egg-info/PKG-INFO
+src/web_fetch.egg-info/SOURCES.txt
+src/web_fetch.egg-info/dependency_links.txt
+src/web_fetch.egg-info/requires.txt
+src/web_fetch.egg-info/top_level.txt
+src/webfetch/MultiDict.py
+src/webfetch/OverloadDict.py
+src/webfetch/__init__.py
+src/webfetch/fetcher.py
