@@ -3,12 +3,12 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "web-fetch"
-version = "0.0.4"
+name = "http-prep"
+version = "0.0.1"
 authors = [
     { name = "Tanner B. Corcoran", email = "tannerbcorcoran@gmail.com" },
 ]
-description = "A tool to easily create complicated and dynamic prepared http requests"
+description = "A tool to easily create complicated and dynamic URLs and headers"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
@@ -16,9 +16,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = [
-    "requests >= 2.27.1",
-]
 
 [project.urls]
-"Homepage" = "https://github.com/tanrbobanr/web-fetch"
+"Homepage" = "https://github.com/tanrbobanr/http-prep"

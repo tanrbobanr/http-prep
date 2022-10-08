@@ -20,19 +20,13 @@ class OverloadDict(dict[typing.Any, OverloadList]):
     """
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-    
-
-    def _set_item(self, __k, __v) -> None:
-        if __k not in self:
-            return super().__setitem__(__k, OverloadList([__v]))
-        return self[__k].append(__v)
 
 
     def __setitem__(self, __k, __v) -> None:
         if type(__k) == tuple and type(__v) not in [tuple, list]:
-            raise TypeError("multiple values must be used if assigning multiple keys")
+            return print(f"multiple values must be used if assigning multiple keys. Expected {len(__k)}, got 1.")
         if type(__k) == tuple:
             for k, v in zip(__k, __v):
-                self._set_item(k, v)
+                self[k].append(v) if __k in self else super().__setitem__(k, OverloadList([v]))
             return
-        return self._set_item(__k, __v)
+        return self[__k].append(__v) if __k in self else super().__setitem__(__k, OverloadList([__v]))
