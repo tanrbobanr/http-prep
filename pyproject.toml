@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "http-prep"
-version = "0.0.4"
+version = "0.0.5"
 authors = [
     { name = "Tanner B. Corcoran", email = "tannerbcorcoran@gmail.com" },
 ]
@@ -16,6 +16,8 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-
+dependencies = [
+    "prepr >= 0.0.5",
+]
 [project.urls]
 "Homepage" = "https://github.com/tanrbobanr/http-prep"
