@@ -1,9 +1,10 @@
 import typing
+import prepr
 
 
 class MISSING:
-    """A placeholder type for the `remove` argument in `format_dict`, `format_list`, and
-    `format_lines`.
+    """A placeholder type for the `remove` argument in `format_dict`,
+    `format_list`, and `format_lines`.
     
     """
 
@@ -229,7 +230,8 @@ class _headers:
         "Cross_Origin_Opener_Policy": "Cross-Origin-Opener-Policy",
         "Cross_Origin_Resource_Policy": "Cross-Origin-Resource-Policy",
         "Content_Security_Policy": "Content-Security-Policy",
-        "Content_Security_Policy_Report_Only": "Content-Security-Policy-Report-Only",
+        "Content_Security_Policy_Report_Only": "Content-Security-Policy-Report-O"
+        "nly",
         "Expect_CT": "Expect-CT",
         "Feature_Policy": "Feature-Policy",
         "Origin_Isolation": "Origin-Isolation",
@@ -238,14 +240,16 @@ class _headers:
         "X_Content_Type_Options": "X-Content-Type-Options",
         "X_Download_Options": "X-Download-Options",
         "X_Frame_Options": "X-Frame-Options",
-        "X_Permitted_Cross_Domain_Policies": "X-Permitted-Cross-Domain-Policies",
+        "X_Permitted_Cross_Domain_Policies": "X-Permitted-Cross-Domain-Policies"
+        ,
         "X_Powered_By": "X-Powered-By",
         "X_XSS_Protection": "X-XSS-Protection",
         "Sec_Fetch_Site": "Sec-Fetch-Site",
         "Sec_Fetch_Mode": "Sec-Fetch-Mode",
         "Sec_Fetch_User": "Sec-Fetch-User",
         "Sec_Fetch_Dest": "Sec-Fetch-Dest",
-        "Service_Worker_Navigation_Preload": "Service-Worker-Navigation-Preload",
+        "Service_Worker_Navigation_Preload": "Service-Worker-Navigation-Preload"
+        ,
         "Last_Event_ID": "Last-Event-ID",
         "NEL": "NEL",
         "Ping_From": "Ping-From",
@@ -284,7 +288,8 @@ class _headers:
 
 
 class Headers(_headers):
-    """A set of all standard (current, depreciated and experimental) HTTP headers.
+    """A set of all standard (current, depreciated and experimental) HTTP
+    headers.
 
     Custom HTTP headers may be set through `__setitem__`, e.g.:
     ```
@@ -293,6 +298,9 @@ class Headers(_headers):
     ```
     
     """
+    def __repr__(self, *args, **kwargs) -> prepr.pstr:
+        return prepr.prepr(self).build(*args, **kwargs)
+
     def format_dict(self, check=MISSING) -> dict:
         """Format the headers into a `dict` object, e.g.:
         ```
@@ -302,7 +310,8 @@ class Headers(_headers):
         Arguments
         ---------
         check : bool
-            If True, all headers whose values are equal to `remove` will be removed.
+            If True, all headers whose values are equal to `remove` will be
+            removed.
         remove : Any, optional, default=MISSING
             See `check` above.
 
@@ -330,7 +339,8 @@ class Headers(_headers):
         Arguments
         ---------
         check : bool
-            If True, all headers whose values are equal to `remove` will be removed.
+            If True, all headers whose values are equal to `remove` will be
+            removed.
         remove : Any, optional, default=MISSING
             See `check` above.
 
@@ -358,7 +368,8 @@ class Headers(_headers):
         Arguments
         ---------
         check : bool
-            If True, all headers whose values are equal to `remove` will be removed.
+            If True, all headers whose values are equal to `remove` will be
+            removed.
         remove : Any, optional, default=MISSING
             See `check` above.
 
