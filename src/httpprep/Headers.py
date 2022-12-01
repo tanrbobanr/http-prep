@@ -359,7 +359,7 @@ class Headers(_headers):
         return new
     
 
-    def format_lines(self, check=MISSING) -> list[str]:
+    def format_lines(self, check=MISSING) -> typing.List[str]:
         """Format the headers into a `list` of `str` object, e.g.:
         ```
         ["Content-Type: application/json","Accept: */*"]

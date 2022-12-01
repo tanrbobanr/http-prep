@@ -8,7 +8,7 @@ class OverloadList(list):
     """
 
 
-class OverloadDict(dict[typing.Any, OverloadList]):
+class OverloadDict(typing.Dict[typing.Any, OverloadList]):
     """Similar to a dictionary, but turns multiple occurances of a key into a
     list of values intead of overwriting the previous value.
 

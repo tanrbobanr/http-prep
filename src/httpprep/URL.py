@@ -1,6 +1,7 @@
 from .OverloadDict import OverloadDict
 import urllib.parse
 import dataclasses
+import typing
 
 
 class NO_CHECK:
@@ -21,8 +22,8 @@ class URLComponents:
     subdomain: str
     domain: str
     top_level_domain: str
-    port: str | int
-    path_segments: list[str]
+    port: typing.Union[str, int]
+    path_segments: typing.List[str]
     queries: OverloadDict
     fragment: str
 
@@ -81,7 +82,8 @@ class URL:
                  protocol: str = None, username: str = None,
                  password: str = None, subdomain: str = None,
                  domain: str = None, top_level_domain: str = None,
-                 port: str | int = None, path_segments: list[str] = ...,
+                 port: typing.Union[str, int] = None,
+                 path_segments: typing.List[str] = ...,
                  queries: OverloadDict = ..., fragment: str = None) -> None:
         """Prepare a URL.
 
